@@ -108,7 +108,8 @@
       h = '<div class="ctt">词语表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + b.length) + ' 个词(共 ' + CT.CI.length + ')</div><div class="words">' + b.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">家长报词,孩子默写;错的词圈出来再写 3 遍。</div>';
     } else if (kind === 'en') {
       var e = CT.EN[idx];
-      h = '<div class="ctt">' + esc(e.t) + '</div><div class="words">' + e.w.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">每个词抄 2 遍并大声读;最后合上本子,看中文默写英文。</div>';
+      h = '<div class="ctt">' + esc(e.t) + '</div><div class="words">' + e.w.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">每个词抄 2 遍并大声读;最后合上本子,看中文默写英文。</div>' +
+        (e.g && e.g.length ? '<div class="ctt" style="margin-top:10px">句型(抄一遍,再换一个词仿写一句)</div>' + e.g.map(function (g) { return '<div class="sent">' + esc(g[0]) + '<small>' + esc(g[1]) + '</small></div>'; }).join('') : '');
     } else if (kind === 'math') {
       var m = CT.math(idx + 1);
       h = '<div class="ctt">' + esc(m.t) + ':6 道题,写在本子上</div><ol class="qs">' + m.items.map(function (x) { return '<li><span class="qk">' + esc(x.k) + '</span> ' + esc(x.q) + (withAns ? '<div class="ans">答案:' + esc(x.a) + '</div>' : '') + '</li>'; }).join('') + '</ol>' + (withAns ? '' : '<div class="hint">竖式要小数点对齐;算完先估一估,再让家长对答案。</div>');
@@ -199,7 +200,16 @@
         var dn1 = dn.indexOf(t.id) >= 0;
         return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>' + (t.kind ? contentHtml(t.kind, curIdx(t), false) : '');
       }).join('') : '<div class="card">今天没有任务,好好休息 😊</div>') +
+      redoHtml() +
       '<div class="card"><b>本周</b><div class="week">' + cells + '</div></div>';
+  }
+  function redoHtml() {
+    var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
+    if (!due.length) return '';
+    return '<div class="card"><b>错题重做</b> <span class="mute">在本子上重做,连续做对 3 次就过关</span>' + due.map(function (m) {
+      return '<div class="redo"><div class="mute">' + esc(m.subject) + ' · ' + m.day.slice(5) + (m.streak ? ' · 已连对 ' + m.streak + ' 次' : '') + '</div><div>' + esc(m.topic) + '</div>' +
+        '<div class="row" style="margin-top:6px"><button class="sm" onclick="A.mk(' + m.id + ',true)">做对了</button><button class="sm ghost" onclick="A.mk(' + m.id + ',false)">还不会</button></div></div>';
+    }).join('') + '</div>';
   }
   function vLogin() {
     root.innerHTML = '<div class="card"><h1>家长入口</h1><div class="row"><input id="pin" type="password" inputmode="numeric" placeholder="PIN"><button onclick="A.login()">进入</button></div>' +
@@ -236,9 +246,10 @@
     pv('<div class="card"><b>录入错题</b><div class="row" style="margin-top:8px"><select id="m_sub">' + opts(SUBJ) + '</select><select id="m_type">' + opts(ERR) + '</select><input type="date" id="m_day" value="' + today() + '"></div>' +
       '<input id="m_topic" placeholder="哪道题/哪个知识点(如:小数乘法竖式对位)" style="width:100%;margin-top:8px"><input id="m_note" placeholder="备注(可选)" style="width:100%;margin-top:8px">' +
       '<div class="mute" style="margin:6px 0">不会=讲不出思路或重做仍错 · 粗心=自己重看能改对 · 没时间=空题或后半段潦草</div><button onclick="A.addM()">保存</button></div>' +
+      '<div class="card"><b>导入错题</b><p class="mute">把 Claude 整理好的错题导入文本粘贴到这里(同一天同一题不会重复导入)。</p><textarea id="m_imp" placeholder="粘贴导入文本"></textarea><div class="row" style="margin-top:8px"><button onclick="A.importM()">导入</button></div></div>' +
       '<div class="row"><button class="ghost" onclick="A.printMistakes()">🖨 打印待订正错题单</button></div>' +
       '<div class="card"><table><tr><th>日期</th><th>科目/内容</th><th>类型</th></tr>' + (list.map(function (m) {
-        return '<tr style="' + (m.fixed ? 'opacity:.5' : '') + '"><td>' + m.day.slice(5) + '</td><td>' + m.subject + '<br>' + esc(m.topic) + '<div class="mute">' + esc(m.note) + (m.redo ? ' · 重做' + m.redo + '次' : '') + '</div>' +
+        return '<tr style="' + (m.fixed ? 'opacity:.5' : '') + '"><td>' + m.day.slice(5) + '</td><td>' + m.subject + '<br>' + esc(m.topic) + '<div class="mute">' + esc(m.note) + (m.redo ? ' · 重做' + m.redo + '次' : '') + ((m.streak || 0) > 0 && !m.fixed ? ' · 连对 ' + m.streak + '/3' : '') + '</div>' +
           '<div class="row" style="margin-top:6px"><button class="sm ghost" onclick="A.redo(' + m.id + ')">重做+1</button><button class="sm" onclick="A.fix(' + m.id + ')">' + (m.fixed ? '撤销' : '已掌握') + '</button><button class="sm danger" onclick="A.delM(' + m.id + ')">删</button></div></td>' +
           '<td><select onchange="A.chType(' + m.id + ',this.value)">' + opts(ERR, m.type) + '</select></td></tr>';
       }).join('') || '<tr><td colspan="3" class="mute">暂无错题</td></tr>') + '</table></div>');
@@ -297,7 +308,7 @@
     pause: function () { S.pauses.push(today()); save(); toast('已记录。这周共 ' + stats(kid).pauses7 + ' 次,做得好。'); render(); },
     addM: function () {
       var topic = document.getElementById('m_topic').value.trim(); if (!topic) return toast('请写一下是哪道题');
-      S.mistakes.push({ id: S.nextId++, kid: kid, day: document.getElementById('m_day').value || today(), subject: document.getElementById('m_sub').value, type: document.getElementById('m_type').value, topic: topic, note: document.getElementById('m_note').value, fixed: false, redo: 0 });
+      S.mistakes.push({ id: S.nextId++, kid: kid, day: document.getElementById('m_day').value || today(), subject: document.getElementById('m_sub').value, type: document.getElementById('m_type').value, topic: topic, note: document.getElementById('m_note').value, fixed: false, redo: 0, streak: 0, next: document.getElementById('m_day').value || today() });
       save(); toast('已保存'); render();
     },
     chType: function (id, t) { S.mistakes.forEach(function (m) { if (m.id === id) m.type = t; }); save(); },
@@ -316,6 +327,32 @@
       S.tasks.push({ id: S.nextId++, kid: kid, name: n, minutes: +document.getElementById('nm').value || 10, days: days, note: '', active: true, sort: 99 }); save(); render();
     },
     saveProg: function (k) { var v = parseInt(document.getElementById('pg_' + k).value, 10); if (!(v >= 1)) return toast('请填 1 以上的数字'); S.prog[k] = Math.min(v - 1, total(k)); save(); toast('进度已保存'); render(); },
+    importM: function () {
+      var v = document.getElementById('m_imp').value.trim(), o;
+      try { o = JSON.parse(v); } catch (e) { return toast('这不是有效的导入文本'); }
+      if (!o || o.fsa !== 'mistakes' || !o.items || !o.items.length) return toast('这不是错题导入文本');
+      var k = kid; S.kids.forEach(function (x) { if (x.name === o.kid) k = x.id; });
+      var n = 0, skip = 0;
+      o.items.forEach(function (it) {
+        if (!it || !it.topic) return;
+        var day = /^\d{4}-\d{2}-\d{2}$/.test(it.day || '') ? it.day : today();
+        if (S.mistakes.some(function (m) { return m.kid === k && m.day === day && m.topic === it.topic; })) { skip++; return; }
+        S.mistakes.push({ id: S.nextId++, kid: k, day: day, subject: SUBJ.indexOf(it.subject) >= 0 ? it.subject : '数学', type: ERR.indexOf(it.type) >= 0 ? it.type : '不会', topic: String(it.topic), note: String(it.note || ''), fixed: false, redo: 0, streak: 0, next: day });
+        n++;
+      });
+      save(); toast('已导入 ' + n + ' 条' + (skip ? ',跳过重复 ' + skip + ' 条' : '')); render();
+    },
+    mk: function (id, ok) {
+      S.mistakes.forEach(function (m) {
+        if (m.id !== id) return;
+        if (ok) {
+          m.streak = (m.streak || 0) + 1; m.redo = (m.redo || 0) + 1;
+          if (m.streak >= 3) { m.fixed = true; toast('这道题过关了 🎉'); }
+          else { m.next = ymd(addDays(new Date(), [1, 3, 7][m.streak - 1])); toast('做对了!过几天再做一次'); }
+        } else { m.streak = 0; m.redo = (m.redo || 0) + 1; m.next = ymd(addDays(new Date(), 1)); toast('没关系,明天再做一次'); }
+      });
+      save(); render();
+    },
     saveTalk: function () { var g = function (i) { return document.getElementById(i).value; }; S.talks[weekKey()] = { better: g('t1'), hardest: g('t2'), help: g('t3'), mine: g('t4') }; save(); toast('已保存'); render(); },
     chPin: function () { var v = document.getElementById('np').value; if (v.length < 4) return toast('PIN至少4位'); S.pin = hashPin(v); S.defpin = false; save(); toast('已修改'); render(); },
     check: function () { checkUpdate(true); },

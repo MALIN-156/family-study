@@ -48,3 +48,5 @@ table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1p
 .words{display:flex;flex-wrap:wrap;gap:6px 14px}.words span{font-size:20px}.words small{display:block;font-size:12px;color:#666}
 .qs{padding-left:20px;margin:0}.qs li{margin:6px 0;font-size:17px}.qk{font-size:12px;background:#eef;border-radius:6px;padding:1px 6px;margin-right:4px}
 .ans{color:#2a7;font-size:14px}.hint{font-size:12px;color:#888;margin-top:8px}
+.sent{margin:6px 0;font-size:17px}.sent small{display:block;font-size:13px;color:#666}
+.redo{border-top:1px solid var(--line);padding:8px 0}
