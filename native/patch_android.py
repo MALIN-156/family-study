@@ -10,8 +10,8 @@ s = gradle.read_text(encoding="utf-8")
 OLD_VER = '''        versionCode 1
         versionName "1.0"'''
 NEW_VER = '''        // 版本号由 GitHub Actions 通过环境变量传入
-        versionCode (System.getenv("VERSION_CODE") ?: "1").toInteger()
-        versionName System.getenv("VERSION_NAME") ?: "1.0.0"'''
+        versionCode Integer.parseInt(System.getenv("VERSION_CODE") ?: "1")
+        versionName(System.getenv("VERSION_NAME") ?: "1.0.0")'''
 OLD_BT = '''    buildTypes {
         release {
             minifyEnabled false'''
