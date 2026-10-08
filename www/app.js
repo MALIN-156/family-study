@@ -99,14 +99,14 @@
   // ---------- 学习内容 ----------
   var CT = window.CONTENT || { ZI: [], CI: [], EN: [], math: function () { return { t: '', items: [] }; } };
   var SZ = { zi: 6, ci: 6 }, KN = { zi: '汉字(写字表)', ci: '词语(词语表)', en: '英语单词(北师大版5上)', math: '数学(小数乘法)' };
-  function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 6) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
+  function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 12) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
   function curIdx(t) { var a = S.adv[today() + '|' + t.id]; return a != null ? a : (S.prog[t.kind] || 0); }
   function contentHtml(kind, idx, withAns) {
     if (idx >= total(kind)) return '<div class="cont">这一部分已经学完 🎉 家长可在「任务」页调整进度。</div>';
     var h = '';
     if (kind === 'zi') {
-      var a = CT.ZI.slice(idx * 6, idx * 6 + 6);
-      h = '<div class="ctt">写字表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + a.length) + ' 个字(共 ' + CT.ZI.length + ')</div><div class="chars">' + a.map(function (z) { return '<div class="ch"><div class="py">' + esc(z[1]) + '</div><div class="hz">' + esc(z[0]) + '</div><div class="rd">偏旁 ' + esc(z[2]) + '</div></div>'; }).join('') + '</div><div class="hint">每个字:读拼音 → 看清笔画 → 写 2 遍 → 盖住默写 1 遍。</div>';
+      var a = CT.ZI.slice(idx * 12, idx * 12 + 12);
+      h = '<div class="ctt">写字表 第 ' + (idx * 12 + 1) + '–' + (idx * 12 + a.length) + ' 个字(共 ' + CT.ZI.length + ')</div><div class="chars">' + a.map(function (z) { return '<div class="ch"><div class="py">' + esc(z[1]) + '</div><div class="hz">' + esc(z[0]) + '</div><div class="rd">偏旁 ' + esc(z[2]) + '</div></div>'; }).join('') + '</div><div class="hint">每个字:读拼音 → 看清笔画 → 写 2 遍 → 盖住默写 1 遍。</div>';
     } else if (kind === 'ci') {
       var b = CT.CI.slice(idx * 6, idx * 6 + 6);
       h = '<div class="ctt">词语表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + b.length) + ' 个词(共 ' + CT.CI.length + ')</div><div class="words">' + b.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">家长报词,孩子默写;错的词圈出来再写 3 遍。</div>';
@@ -177,20 +177,19 @@
   }
   function sheetHtml(kind, idx, ans) {
     var css = '@page{size:A4;margin:12mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:14px/1.5 "Microsoft YaHei",sans-serif;margin:0;color:#000}h1{font-size:18px;margin:0 0 4px}.nm{font-size:12px;color:#444;margin-bottom:8px}' +
-      '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{width:20mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
-      '.t{position:relative;width:9mm;height:9mm;border:1px solid #222;box-sizing:border-box;font-size:6.5mm;line-height:9mm;text-align:center;color:#aaa}' +
+      '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{flex:none;width:20mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
+      '.t{flex:none;position:relative;width:9mm;height:9mm;border:1px solid #222;box-sizing:border-box;font-size:6.5mm;line-height:9mm;text-align:center;color:#aaa}' +
       '.t:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #bbb}.t:after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #bbb}' +
-      '.l4{position:relative;height:10mm;border-top:1px solid #777;border-bottom:1px solid #777;margin:0 0 5mm}.l4:before{content:"";position:absolute;left:0;right:0;top:33.3%;border-top:1px solid #333}.l4:after{content:"";position:absolute;left:0;right:0;top:66.6%;border-top:1px solid #d33}' +
+      '.l4{position:relative;height:8mm;border-top:1px solid #777;border-bottom:1px solid #777;margin:0 0 2mm}.l4:before{content:"";position:absolute;left:0;right:0;top:33.3%;border-top:1px solid #333}.l4:after{content:"";position:absolute;left:0;right:0;top:66.6%;border-top:1px solid #d33}' +
       '.w{font-size:15px;margin:3mm 0 1mm}.w small{color:#555;font-size:12px;margin-left:6px}.sec{font-weight:bold;margin:5mm 0 2mm;font-size:14px}.ln{border-bottom:1px solid #333;height:9mm;margin:0 0 1mm}' +
-            '.q{page-break-inside:avoid;margin:0 0 4mm;font-size:16px}.sp{height:34mm}.pb{page-break-before:always}.gr{border:1px solid #888;padding:4px 8px;margin:3mm 0;font-size:13px}';
+            '.q{page-break-inside:avoid;margin:0 0 4mm;font-size:16px}.sp{height:26mm}.g2{display:grid;grid-template-columns:1fr 1fr;gap:0 8mm}.pb{page-break-before:always}.gr{border:1px solid #888;padding:4px 8px;margin:3mm 0;font-size:13px}';
     var h = '', title = '';
     var head = function (t, sub) { return '<h1>' + esc(t) + '</h1><div class="nm">姓名:__________  日期:__________  ' + esc(sub || '') + '</div>'; };
     if (kind === 'zi') {
-      var a = CT.ZI.slice(idx * 6, idx * 6 + 6); title = '汉字书写练习';
+      var a = CT.ZI.slice(idx * 12, idx * 12 + 12); title = '汉字书写练习';
       var blank = function (n) { var c = ''; for (var i = 0; i < n; i++) c += '<div class="t"></div>'; return c; };
       h = head(title, '每个字:看清笔画,先描一遍灰字,再写在空格里。') + a.map(function (z) {
-        return '<div class="row"><div class="lab">' + esc(z[1]) + '<b>' + esc(z[0]) + '</b>偏旁 ' + esc(z[2]) + '</div><div class="t">' + esc(z[0]) + '</div>' + blank(17) + '</div>' +
-          '<div class="row"><div class="lab"></div>' + blank(18) + '</div><div class="row"><div class="lab"></div>' + blank(18) + '</div>';
+        return '<div class="row"><div class="lab">' + esc(z[1]) + '<br>偏旁 ' + esc(z[2]) + '</div><div class="t">' + esc(z[0]) + '</div>' + blank(17) + '</div>';
       }).join('');
     } else if (kind === 'ci') {
       var b = CT.CI.slice(idx * 6, idx * 6 + 6); title = '词语听写练习';
@@ -198,11 +197,11 @@
         '<div class="pb"></div>' + head('词语听写 · 家长报词表') + b.map(function (w, i) { return '<div class="q">' + (i + 1) + '. ' + esc(w[0]) + ' <span style="color:#666;font-size:13px">' + esc(w[1]) + '</span></div>'; }).join('');
     } else if (kind === 'en') {
       var e = CT.EN[idx]; title = '英语书写练习';
-      var wl = function (w) { return '<div class="w">' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></div><div class="l4"></div><div class="l4"></div>'; };
-      h = head(title, e.t) + '<div class="sec">一、单词:每个抄 2 遍</div>' + e.w.map(wl).join('') +
-        (e.g && e.g.length ? '<div class="pb"></div><div class="sec">二、句子:抄一遍,再换一个词仿写一句</div>' + e.g.map(wl).join('') : '') +
+      var wl = function (w) { return '<div><div class="w">' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></div><div class="l4"></div></div>'; };
+      h = head(title, e.t) + '<div class="sec">一、单词:每个抄一遍</div><div class="g2">' + e.w.map(wl).join('') + '</div>' +
+        (e.g && e.g.length ? '<div class="sec">二、句子:抄一遍,再换一个词仿写一句</div>' + e.g.map(wl).join('') : '') +
         (e.r && e.r.length ? '<div class="sec">三、语法小贴士</div>' + e.r.map(function (r) { return '<div class="gr"><b>' + esc(r[0]) + '</b> ' + esc(r[1]) + '</div>'; }).join('') : '') +
-        '<div class="sec">四、默写:看中文,写英文</div>' + e.w.map(function (w) { return '<div class="q" style="margin:0 0 2mm">' + esc(w[1]) + ' → <span style="display:inline-block;width:90mm;border-bottom:1px solid #333">&nbsp;</span></div>'; }).join('');
+        '<div class="sec">四、默写:看中文,写英文</div>' + e.w.map(function (w) { return '<div class="q" style="margin:0 0 2mm;font-size:14px;display:inline-block;width:49%">' + esc(w[1]) + ' → <span style="display:inline-block;width:42mm;border-bottom:1px solid #333">&nbsp;</span></div>'; }).join('');
     } else if (kind === 'math') {
       var m = CT.math(idx + 1); title = '数学练习';
       var HT = { '小数乘整数': '先当作整数乘,再看小数有几位,积就点几位小数。', '竖式:小数乘小数(注意对位)': '竖式末位对齐,先按整数乘;两个因数一共有几位小数,积就从右往左数几位点小数点。', '位数判断': '先数两个因数一共有几位小数,积就有几位小数。', '凑整简算': '先找能凑成整数的数相乘(如 0.25×4、1.25×0.8、2.5×0.4);带 101 的题可以想 101=100+1。', '四舍五入': '先算出准确的积,再看要保留位的后一位:4 以下舍去,5 以上进一。', '乘法分配律': '可以先算括号里的和;也可以用 (a+b)×c=a×c+b×c,看哪个更简便。', '阶梯计价应用题': '分段算:不超过的部分按第一种价,超过的部分按第二种价,最后把两段的钱加起来。' };
