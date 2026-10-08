@@ -61,6 +61,19 @@ jobs:
           echo "$KEYSTORE_B64" | base64 -d > "$RUNNER_TEMP/release.jks"
           echo "KEYSTORE_FILE=$RUNNER_TEMP/release.jks" >> "$GITHUB_ENV"
 
+      - name: 自检签名材料(不输出密码)
+        env:
+          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+        run: |
+          echo "密码长度: ${#KEYSTORE_PASSWORD}"
+          echo "密钥库指纹: $(sha256sum "$KEYSTORE_FILE" | cut -c1-16)"
+          if keytool -list -keystore "$KEYSTORE_FILE" -storepass "$KEYSTORE_PASSWORD" >/dev/null 2>&1; then
+            echo "结果: 密码可以打开密钥库"
+          else
+            echo "结果: 密码打不开密钥库(请检查 KEYSTORE_PASSWORD / KEYSTORE_B64)"
+            exit 1
+          fi
+
       - name: 构建签名 APK
         working-directory: android
         env:
