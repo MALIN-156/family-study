@@ -171,7 +171,7 @@
     var P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
     if (P && P.open) P.open({ url: u }); else window.open(u, '_blank');
   }
-  function sheetHtml(kind, idx) {
+  function sheetHtml(kind, idx, ans) {
     var css = '@page{size:A4;margin:12mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:14px/1.5 "Microsoft YaHei",sans-serif;margin:0;color:#000}h1{font-size:18px;margin:0 0 4px}.nm{font-size:12px;color:#444;margin-bottom:8px}' +
       '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{width:20mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
       '.t{position:relative;width:12mm;height:12mm;border:1px solid #222;box-sizing:border-box;font-size:8.5mm;line-height:12mm;text-align:center;color:#aaa}' +
@@ -200,8 +200,9 @@
         '<div class="sec">四、默写:看中文,写英文</div>' + e.w.map(function (w) { return '<div class="q" style="margin:0 0 2mm">' + esc(w[1]) + ' → <span style="display:inline-block;width:90mm;border-bottom:1px solid #333">&nbsp;</span></div>'; }).join('');
     } else if (kind === 'math') {
       var m = CT.math(idx + 1); title = '数学练习';
-      h = head(title, m.t) + m.items.map(function (x, i) { return '<div class="q">(' + (i + 1) + ') ' + esc(x.q) + '<div class="sp"></div></div>'; }).join('') +
-        '<div class="pb"></div>' + head('数学练习 · 参考答案(家长用)', m.t) + m.items.map(function (x, i) { return '<div class="q">(' + (i + 1) + ') ' + esc(x.q) + '<br><span style="color:#2a7;font-size:14px">答案:' + esc(x.a) + '</span></div>'; }).join('');
+      var HT = { '小数乘整数': '先当作整数乘,再看小数有几位,积就点几位小数。', '竖式:小数乘小数(注意对位)': '竖式末位对齐,先按整数乘;两个因数一共有几位小数,积就从右往左数几位点小数点。', '位数判断': '先数两个因数一共有几位小数,积就有几位小数。', '凑整简算': '先找能凑成整数的数相乘(如 0.25×4、1.25×0.8、2.5×0.4);带 101 的题可以想 101=100+1。', '四舍五入': '先算出准确的积,再看要保留位的后一位:4 以下舍去,5 以上进一。', '乘法分配律': '可以先算括号里的和;也可以用 (a+b)×c=a×c+b×c,看哪个更简便。', '阶梯计价应用题': '分段算:不超过的部分按第一种价,超过的部分按第二种价,最后把两段的钱加起来。' };
+      h = head(title, m.t) + m.items.map(function (x, i) { return '<div class="q">(' + (i + 1) + ') ' + esc(x.q) + (HT[x.k] ? '<div style="font-size:11px;color:#666;margin-top:1mm">提示:' + esc(HT[x.k]) + '</div>' : '') + '<div class="sp"></div></div>'; }).join('') +
+        (ans ? '<div class="pb"></div>' + head('数学练习 · 参考答案(家长用)', m.t) + m.items.map(function (x, i) { return '<div class="q">(' + (i + 1) + ') ' + esc(x.q) + '<br><span style="color:#2a7;font-size:14px">答案:' + esc(x.a) + '</span></div>'; }).join('') : '');
     }
     return { html: '<!doctype html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + h + '</body></html>', title: title };
   }
@@ -305,7 +306,7 @@
     kinds.forEach(function (k) {
       var ix = S.prog[k] || 0, tt = total(k);
       prog += '<div class="card"><b>' + KN[k] + '</b> <span class="mute">' + (k === 'math' ? '已做 ' + ix + ' 天' : '下一份:第 ' + Math.min(ix + 1, tt) + ' / ' + tt + ' 份') + '</span>' +
-        '<div class="row" style="margin-top:6px">从第 <input type="number" id="pg_' + k + '" value="' + (ix + 1) + '" min="1" style="width:70px"> 份开始 <button class="sm" onclick="A.saveProg(\'' + k + '\')">保存进度</button> <button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + ix + ')">🖨 打印当前这份</button></div>' +
+        '<div class="row" style="margin-top:6px">从第 <input type="number" id="pg_' + k + '" value="' + (ix + 1) + '" min="1" style="width:70px"> 份开始 <button class="sm" onclick="A.saveProg(\'' + k + '\')">保存进度</button> <button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + ix + ',1)">🖨 打印当前这份(数学含答案页)</button></div>' +
         (k === 'math' ? '<details style="margin-top:6px"><summary>查看今天数学题的答案</summary>' + contentHtml(k, ix, true) + '</details>' : '') + '</div>';
     });
     pv((prog ? '<div class="card"><b>学习内容进度</b> <span class="mute">(孩子每打一次卡,内容自动换下一份;可在这里改到课本实际进度)</span>' + prog + '</div>' : '') + '<div class="card"><b>每日任务</b> <span class="mute">(勾选哪几天出现)</span>' + ts.map(function (t) {
@@ -429,9 +430,9 @@
         return '<tr><td>' + esc(t.name) + '<div class="m">' + esc(t.note) + '</div></td><td>' + t.minutes + '</td>' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<td class="c">' + (t.days.indexOf(d) >= 0 ? '☐' : '') + '</td>'; }).join('') + '</tr>';
       }).join('') + '</table>'), k.name + ' 一周安排');
     },
-    printKind: function (kind, idx) {
+    printKind: function (kind, idx, ans) {
       if (idx >= total(kind)) return toast('这一部分已经学完');
-      var r = sheetHtml(kind, idx); printHtml(r.html, r.title);
+      var r = sheetHtml(kind, idx, ans); printHtml(r.html, r.title);
     },
     printMistakes: function () {
       var k = kidOf(kid), ms = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed; }).sort(function (a, b) { return a.subject < b.subject ? -1 : 1; });
