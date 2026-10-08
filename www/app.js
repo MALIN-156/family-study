@@ -1,4 +1,4 @@
-/* 家庭学习打卡 - 纯前端版(数据存在手机本地 localStorage) */
+九年级九年级/* 家庭学习打卡 - 纯前端版(数据存在手机本地 localStorage) */
 (function () {
   'use strict';
   var ERR = ['不会', '粗心', '没时间'], SUBJ = ['语文', '数学', '英语'];
@@ -45,7 +45,7 @@
   var S;
   function seed() {
     var s = { v: 1, start: today(), pin: hashPin('1234'), defpin: true, nextId: 1, kids: [
-      { id: 1, name: 'MWY', emoji: '🦁', grade: '五年级' }, { id: 2, name: 'MWN', emoji: '🐼', grade: '初中' }],
+      { id: 1, name: 'MWY', emoji: '🦁', grade: '五年级' }, { id: 2, name: 'MWN', emoji: '🐼', grade: '九年级' }],
       tasks: [], checkins: {}, mistakes: [], talks: {}, pauses: [] };
     [[1, MWY], [2, MWN]].forEach(function (kp) {
       kp[1].forEach(function (t, i) { s.tasks.push({ id: s.nextId++, kid: kp[0], name: t[0], minutes: t[1], days: t[2], note: t[3], active: true, sort: i }); });
