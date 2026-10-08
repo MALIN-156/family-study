@@ -109,11 +109,13 @@
     } else if (kind === 'en') {
       var e = CT.EN[idx];
       h = '<div class="ctt">' + esc(e.t) + '</div><div class="words">' + e.w.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">每个词抄 2 遍并大声读;最后合上本子,看中文默写英文。</div>' +
-        (e.g && e.g.length ? '<div class="ctt" style="margin-top:10px">句型(抄一遍,再换一个词仿写一句)</div>' + e.g.map(function (g) { return '<div class="sent">' + esc(g[0]) + '<small>' + esc(g[1]) + '</small></div>'; }).join('') : '');
+        (e.g && e.g.length ? '<div class="ctt" style="margin-top:10px">句型(抄一遍,再换一个词仿写一句)</div>' + e.g.map(function (g) { return '<div class="sent">' + esc(g[0]) + '<small>' + esc(g[1]) + '</small></div>'; }).join('') : '') +
+        (e.r && e.r.length ? '<div class="ctt" style="margin-top:10px">语法小贴士</div>' + e.r.map(function (r) { return '<div class="gram"><b>' + esc(r[0]) + '</b>' + esc(r[1]) + '</div>'; }).join('') : '');
     } else if (kind === 'math') {
       var m = CT.math(idx + 1);
       h = '<div class="ctt">' + esc(m.t) + ':6 道题,写在本子上</div><ol class="qs">' + m.items.map(function (x) { return '<li><span class="qk">' + esc(x.k) + '</span> ' + esc(x.q) + (withAns ? '<div class="ans">答案:' + esc(x.a) + '</div>' : '') + '</li>'; }).join('') + '</ol>' + (withAns ? '' : '<div class="hint">竖式要小数点对齐;算完先估一估,再让家长对答案。</div>');
     }
+    if (!withAns) h += '<div class="row" style="margin-top:8px"><button class="sm ghost" onclick="event.stopPropagation();A.printKind(\'' + kind + '\',' + idx + ')">🖨 打印这份练习</button></div>';
     return '<div class="cont">' + h + '</div>';
   }
   function toggle(taskId) {
@@ -168,6 +170,40 @@
   function openUrl(u) {
     var P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
     if (P && P.open) P.open({ url: u }); else window.open(u, '_blank');
+  }
+  function sheetHtml(kind, idx) {
+    var css = '@page{size:A4;margin:12mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:14px/1.5 "Microsoft YaHei",sans-serif;margin:0;color:#000}h1{font-size:18px;margin:0 0 4px}.nm{font-size:12px;color:#444;margin-bottom:8px}' +
+      '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{width:22mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
+      '.t{position:relative;width:17mm;height:17mm;border:1px solid #222;box-sizing:border-box;font-size:12mm;line-height:17mm;text-align:center;color:#aaa}' +
+      '.t:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #bbb}.t:after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #bbb}' +
+      '.l4{position:relative;height:11mm;border-top:1px solid #333;border-bottom:1px solid #333;margin:0 0 2mm}.l4:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #999}' +
+      '.w{font-size:15px;margin:3mm 0 1mm}.w small{color:#555;font-size:12px;margin-left:6px}.sec{font-weight:bold;margin:5mm 0 2mm;font-size:14px}.ln{border-bottom:1px solid #333;height:9mm;margin:0 0 1mm}' +
+      '.q{page-break-inside:avoid;margin:0 0 4mm;font-size:16px}.sp{height:34mm}.pb{page-break-before:always}.gr{border:1px solid #888;padding:4px 8px;margin:3mm 0;font-size:13px}';
+    var h = '', title = '';
+    var head = function (t, sub) { return '<h1>' + esc(t) + '</h1><div class="nm">姓名:__________  日期:__________  ' + esc(sub || '') + '</div>'; };
+    if (kind === 'zi') {
+      var a = CT.ZI.slice(idx * 6, idx * 6 + 6); title = '汉字书写练习';
+      h = head(title, '每个字:看清笔画,先描一遍灰字,再写在空格里。') + a.map(function (z) {
+        var cells = '<div class="t">' + esc(z[0]) + '</div>'; for (var i = 0; i < 8; i++) cells += '<div class="t"></div>';
+        return '<div class="row"><div class="lab">' + esc(z[1]) + '<b>' + esc(z[0]) + '</b>偏旁 ' + esc(z[2]) + '</div>' + cells + '</div>';
+      }).join('');
+    } else if (kind === 'ci') {
+      var b = CT.CI.slice(idx * 6, idx * 6 + 6); title = '词语听写练习';
+      h = head(title, '家长报词,孩子写在横线上;写错的词订正后再写 3 遍。') + b.map(function (w, i) { return '<div class="q">' + (i + 1) + '. <span style="color:#555;font-size:13px">' + esc(w[1]) + '</span><div class="ln"></div></div>'; }).join('') +
+        '<div class="pb"></div>' + head('词语听写 · 家长报词表') + b.map(function (w, i) { return '<div class="q">' + (i + 1) + '. ' + esc(w[0]) + ' <span style="color:#666;font-size:13px">' + esc(w[1]) + '</span></div>'; }).join('');
+    } else if (kind === 'en') {
+      var e = CT.EN[idx]; title = '英语书写练习';
+      var wl = function (w) { return '<div class="w">' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></div><div class="l4"></div><div class="l4"></div>'; };
+      h = head(title, e.t) + '<div class="sec">一、单词:每个抄 2 遍</div>' + e.w.map(wl).join('') +
+        (e.g && e.g.length ? '<div class="pb"></div><div class="sec">二、句子:抄一遍,再换一个词仿写一句</div>' + e.g.map(wl).join('') : '') +
+        (e.r && e.r.length ? '<div class="sec">三、语法小贴士</div>' + e.r.map(function (r) { return '<div class="gr"><b>' + esc(r[0]) + '</b> ' + esc(r[1]) + '</div>'; }).join('') : '') +
+        '<div class="sec">四、默写:看中文,写英文</div>' + e.w.map(function (w) { return '<div class="q" style="margin:0 0 2mm">' + esc(w[1]) + ' → <span style="display:inline-block;width:90mm;border-bottom:1px solid #333">&nbsp;</span></div>'; }).join('');
+    } else if (kind === 'math') {
+      var m = CT.math(idx + 1); title = '数学练习';
+      h = head(title, m.t) + m.items.map(function (x, i) { return '<div class="q">(' + (i + 1) + ') ' + esc(x.q) + '<div class="sp"></div></div>'; }).join('') +
+        '<div class="pb"></div>' + head('数学练习 · 参考答案(家长用)', m.t) + m.items.map(function (x, i) { return '<div class="q">(' + (i + 1) + ') ' + esc(x.q) + '<br><span style="color:#2a7;font-size:14px">答案:' + esc(x.a) + '</span></div>'; }).join('');
+    }
+    return { html: '<!doctype html><html><head><meta charset="utf-8"><style>' + css + '</style></head><body>' + h + '</body></html>', title: title };
   }
   function printHtml(html, title) {
     var C = window.Capacitor, P = C && C.isNativePlatform && C.isNativePlatform() && C.Plugins && C.Plugins.PrintHtml;
@@ -263,7 +299,7 @@
     kinds.forEach(function (k) {
       var ix = S.prog[k] || 0, tt = total(k);
       prog += '<div class="card"><b>' + KN[k] + '</b> <span class="mute">' + (k === 'math' ? '已做 ' + ix + ' 天' : '下一份:第 ' + Math.min(ix + 1, tt) + ' / ' + tt + ' 份') + '</span>' +
-        '<div class="row" style="margin-top:6px">从第 <input type="number" id="pg_' + k + '" value="' + (ix + 1) + '" min="1" style="width:70px"> 份开始 <button class="sm" onclick="A.saveProg(\'' + k + '\')">保存进度</button></div>' +
+        '<div class="row" style="margin-top:6px">从第 <input type="number" id="pg_' + k + '" value="' + (ix + 1) + '" min="1" style="width:70px"> 份开始 <button class="sm" onclick="A.saveProg(\'' + k + '\')">保存进度</button> <button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + ix + ')">🖨 打印当前这份</button></div>' +
         (k === 'math' ? '<details style="margin-top:6px"><summary>查看今天数学题的答案</summary>' + contentHtml(k, ix, true) + '</details>' : '') + '</div>';
     });
     pv((prog ? '<div class="card"><b>学习内容进度</b> <span class="mute">(孩子每打一次卡,内容自动换下一份;可在这里改到课本实际进度)</span>' + prog + '</div>' : '') + '<div class="card"><b>每日任务</b> <span class="mute">(勾选哪几天出现)</span>' + ts.map(function (t) {
@@ -386,6 +422,10 @@
       printHtml(doc(k.name + ' 一周学习安排', '<table><tr><th>任务</th><th>分钟</th>' + WD.map(function (w) { return '<th>周' + w + '</th>'; }).join('') + '</tr>' + ts.map(function (t) {
         return '<tr><td>' + esc(t.name) + '<div class="m">' + esc(t.note) + '</div></td><td>' + t.minutes + '</td>' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<td class="c">' + (t.days.indexOf(d) >= 0 ? '☐' : '') + '</td>'; }).join('') + '</tr>';
       }).join('') + '</table>'), k.name + ' 一周安排');
+    },
+    printKind: function (kind, idx) {
+      if (idx >= total(kind)) return toast('这一部分已经学完');
+      var r = sheetHtml(kind, idx); printHtml(r.html, r.title);
     },
     printMistakes: function () {
       var k = kidOf(kid), ms = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed; }).sort(function (a, b) { return a.subject < b.subject ? -1 : 1; });
