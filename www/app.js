@@ -35,7 +35,7 @@
     ['汉字书写', 10, [1, 2, 3, 4, 5], '写慢写对;标准是"认真写",不是"好看"', 'zi'],
     ['英语书写', 10, [1, 2, 3, 4, 5], '抄写并朗读,对照字形', 'en'],
     ['语文:词语听写(家长报词)', 10, [1, 3], '错的词圈出来,再写3遍', 'ci'],
-    ['数学:小数乘法练习', 15, [2, 5], '写在本子上,做完让家长对答案', 'math'],
+    ['数学:小数乘法练习', 15, [1, 2, 3, 4, 5, 6, 7], '写在本子上,做完让家长对答案', 'math'],
     ['数学错题订正', 25, [1, 4], '当天作业里的错题'],
     ['语文:错字词/阅读题订正', 25, [2], ''],
     ['英语:单词/课文朗读/错题', 25, [3], ''],
@@ -48,7 +48,7 @@
   function seed() {
     var s = { v: 1, start: today(), pin: hashPin('1234'), defpin: true, nextId: 1, kids: [
       { id: 1, name: 'MWY', emoji: '🦁', grade: '五年级' }, { id: 2, name: 'MWN', emoji: '🐼', grade: '九年级' }],
-      tasks: [], checkins: {}, mistakes: [], talks: {}, pauses: [], prog: {}, adv: {}, mig: 2 };
+      tasks: [], checkins: {}, mistakes: [], talks: {}, pauses: [], prog: {}, adv: {}, mig: 3 };
     [[1, MWY], [2, MWN]].forEach(function (kp) {
       kp[1].forEach(function (t, i) { s.tasks.push({ id: s.nextId++, kid: kp[0], name: t[0], minutes: t[1], days: t[2], note: t[3], kind: t[4] || '', active: true, sort: i }); });
     });
@@ -66,6 +66,10 @@
         if (!S.tasks.some(function (t) { return t.kid === 1 && t.kind === x[4]; })) S.tasks.push({ id: S.nextId++, kid: 1, name: x[0], minutes: x[1], days: x[2], note: x[3], kind: x[4], active: true, sort: 50 });
       });
       S.mig = 2; save();
+    }
+    if ((S.mig || 0) < 3) { // 数学改为每天都有
+      S.tasks.forEach(function (t) { if (t.kid === 1 && t.kind === 'math') t.days = [1, 2, 3, 4, 5, 6, 7]; });
+      S.mig = 3; save();
     }
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存失败:存储不可用'); } }
@@ -178,15 +182,16 @@
       '.t:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #bbb}.t:after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #bbb}' +
       '.l4{position:relative;height:10mm;border-top:1px solid #777;border-bottom:1px solid #777;margin:0 0 5mm}.l4:before{content:"";position:absolute;left:0;right:0;top:33.3%;border-top:1px solid #333}.l4:after{content:"";position:absolute;left:0;right:0;top:66.6%;border-top:1px solid #d33}' +
       '.w{font-size:15px;margin:3mm 0 1mm}.w small{color:#555;font-size:12px;margin-left:6px}.sec{font-weight:bold;margin:5mm 0 2mm;font-size:14px}.ln{border-bottom:1px solid #333;height:9mm;margin:0 0 1mm}' +
+      '.zf{display:flex;flex-wrap:wrap;gap:4mm 6mm}.zi{display:flex;flex-wrap:wrap;align-items:flex-start;max-width:100%;page-break-inside:avoid}.chip{width:13mm;height:9mm;box-sizing:border-box;border:1px solid #444;border-radius:2mm;background:#f2eee4;text-align:center;line-height:1.1;margin-right:1mm;display:flex;flex-direction:column;justify-content:center}.chip span{font-size:8px;color:#444}.chip b{font-size:10px;color:#c0392b}.t2{position:relative;width:9mm;height:9mm;border:1px solid #333;box-sizing:border-box;margin-bottom:0.5mm}.t2:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #d9534f}.t2:after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #d9534f}' +
       '.q{page-break-inside:avoid;margin:0 0 4mm;font-size:16px}.sp{height:34mm}.pb{page-break-before:always}.gr{border:1px solid #888;padding:4px 8px;margin:3mm 0;font-size:13px}';
     var h = '', title = '';
     var head = function (t, sub) { return '<h1>' + esc(t) + '</h1><div class="nm">姓名:__________  日期:__________  ' + esc(sub || '') + '</div>'; };
     if (kind === 'zi') {
-      var a = CT.ZI.slice(idx * 6, idx * 6 + 6); title = '汉字书写练习';
-      h = head(title, '每个字:看清笔画,先描一遍灰字,再写在空格里。') + a.map(function (z) {
-        var cells = '<div class="t">' + esc(z[0]) + '</div>'; for (var i = 0; i < 12; i++) cells += '<div class="t"></div>';
-        return '<div class="row"><div class="lab">' + esc(z[1]) + '<b>' + esc(z[0]) + '</b>偏旁 ' + esc(z[2]) + '</div>' + cells + '</div>';
-      }).join('');
+      var a = CT.ZI.slice(idx * 6, idx * 6 + 6); title = '汉字默写练习';
+      h = head(title, '只给拼音与偏旁提示,不出示字形,请在田字格中把整个字完整默写出来(格数=该字笔画数)。') + '<div class="zf">' + a.map(function (z) {
+        var n = z[3] || 8, cells = ''; for (var i = 0; i < n; i++) cells += '<div class="t2"></div>';
+        return '<div class="zi"><div class="chip"><span>' + esc(z[1]) + '</span><b>' + esc(z[2]) + '</b></div>' + cells + '</div>';
+      }).join('') + '</div>' + (ans ? '<div class="sec">参考答案(家长用)</div><div style="font-size:18px;letter-spacing:6px">' + a.map(function (z) { return esc(z[0]); }).join(' ') + '</div>' : '');
     } else if (kind === 'ci') {
       var b = CT.CI.slice(idx * 6, idx * 6 + 6); title = '词语听写练习';
       h = head(title, '家长报词,孩子写在横线上;写错的词订正后再写 3 遍。') + b.map(function (w, i) { return '<div class="q">' + (i + 1) + '. <span style="color:#555;font-size:13px">' + esc(w[1]) + '</span><div class="ln"></div></div>'; }).join('') +
