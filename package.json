@@ -1,0 +1,14 @@
+{
+  "name": "family-study-android",
+  "version": "1.0.0",
+  "private": true,
+  "description": "家庭学习打卡 Android 应用",
+  "dependencies": {
+    "@capacitor/android": "8.5.3",
+    "@capacitor/browser": "8.0.5",
+    "@capacitor/core": "8.5.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "8.5.3"
+  }
+}

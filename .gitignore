@@ -1,0 +1,5 @@
+node_modules/
+android/
+*.jks
+*.keystore
+*.b64.txt
