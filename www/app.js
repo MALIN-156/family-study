@@ -32,8 +32,10 @@
 
   // ---------- 数据 ----------
   var MWY = [
-    ['汉字书写', 10, [1, 2, 3, 4, 5], '一次只写5-8个字,写慢写对;标准是"认真写",不是"好看"'],
-    ['英语书写', 10, [1, 2, 3, 4, 5], '抄2-3行,对照字形'],
+    ['汉字书写', 10, [1, 2, 3, 4, 5], '写慢写对;标准是"认真写",不是"好看"', 'zi'],
+    ['英语书写', 10, [1, 2, 3, 4, 5], '抄写并朗读,对照字形', 'en'],
+    ['语文:词语听写(家长报词)', 10, [1, 3], '错的词圈出来,再写3遍', 'ci'],
+    ['数学:小数乘法练习', 15, [2, 5], '写在本子上,做完让家长对答案', 'math'],
     ['数学错题订正', 25, [1, 4], '当天作业里的错题'],
     ['语文:错字词/阅读题订正', 25, [2], ''],
     ['英语:单词/课文朗读/错题', 25, [3], ''],
@@ -41,20 +43,30 @@
     ['本周错题整理(家长陪同)', 30, [6], '按"不会/粗心/没时间"归类'],
     ['轻复习:把错题讲给家长听', 15, [7], '休息日,只做轻量复习']
   ];
-  var MWN = [['英语:单词与课文', 20, [1, 2, 3, 4, 5], ''], ['书写练习', 10, [1, 2, 3, 4, 5], '']];
+  var MWN = [['英语:单词与课文', 20, [1, 2, 3, 4, 5], '']];
   var S;
   function seed() {
     var s = { v: 1, start: today(), pin: hashPin('1234'), defpin: true, nextId: 1, kids: [
       { id: 1, name: 'MWY', emoji: '🦁', grade: '五年级' }, { id: 2, name: 'MWN', emoji: '🐼', grade: '九年级' }],
-      tasks: [], checkins: {}, mistakes: [], talks: {}, pauses: [] };
+      tasks: [], checkins: {}, mistakes: [], talks: {}, pauses: [], prog: {}, adv: {}, mig: 2 };
     [[1, MWY], [2, MWN]].forEach(function (kp) {
-      kp[1].forEach(function (t, i) { s.tasks.push({ id: s.nextId++, kid: kp[0], name: t[0], minutes: t[1], days: t[2], note: t[3], active: true, sort: i }); });
+      kp[1].forEach(function (t, i) { s.tasks.push({ id: s.nextId++, kid: kp[0], name: t[0], minutes: t[1], days: t[2], note: t[3], kind: t[4] || '', active: true, sort: i }); });
     });
     return s;
   }
   function load() {
     try { S = JSON.parse(localStorage.getItem(KEY)); } catch (e) { S = null; }
     if (!S || !S.kids || !S.tasks) S = seed();
+    if (!S.prog) S.prog = {};
+    if (!S.adv) S.adv = {};
+    if ((S.mig || 0) < 2) { // 旧版升级:给原有任务挂上学习内容,并补上新任务
+      var KM = { '汉字书写': 'zi', '英语书写': 'en' };
+      S.tasks.forEach(function (t) { if (t.kid === 1 && !t.kind && KM[t.name]) t.kind = KM[t.name]; });
+      [['语文:词语听写(家长报词)', 10, [1, 3], '错的词圈出来,再写3遍', 'ci'], ['数学:小数乘法练习', 15, [2, 5], '写在本子上,做完让家长对答案', 'math']].forEach(function (x) {
+        if (!S.tasks.some(function (t) { return t.kid === 1 && t.kind === x[4]; })) S.tasks.push({ id: S.nextId++, kid: 1, name: x[0], minutes: x[1], days: x[2], note: x[3], kind: x[4], active: true, sort: 50 });
+      });
+      S.mig = 2; save();
+    }
   }
   function save() { try { localStorage.setItem(KEY, JSON.stringify(S)); } catch (e) { toast('保存失败:存储不可用'); } }
   function kidOf(id) { return S.kids.filter(function (k) { return k.id === id; })[0]; }
@@ -80,11 +92,41 @@
     }
     return s;
   }
+  // ---------- 学习内容 ----------
+  var CT = window.CONTENT || { ZI: [], CI: [], EN: [], math: function () { return { t: '', items: [] }; } };
+  var SZ = { zi: 6, ci: 6 }, KN = { zi: '汉字(写字表)', ci: '词语(词语表)', en: '英语单词(北师大版5上)', math: '数学(小数乘法)' };
+  function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 6) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
+  function curIdx(t) { var a = S.adv[today() + '|' + t.id]; return a != null ? a : (S.prog[t.kind] || 0); }
+  function contentHtml(kind, idx, withAns) {
+    if (idx >= total(kind)) return '<div class="cont">这一部分已经学完 🎉 家长可在「任务」页调整进度。</div>';
+    var h = '';
+    if (kind === 'zi') {
+      var a = CT.ZI.slice(idx * 6, idx * 6 + 6);
+      h = '<div class="ctt">写字表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + a.length) + ' 个字(共 ' + CT.ZI.length + ')</div><div class="chars">' + a.map(function (z) { return '<div class="ch"><div class="py">' + esc(z[1]) + '</div><div class="hz">' + esc(z[0]) + '</div><div class="rd">偏旁 ' + esc(z[2]) + '</div></div>'; }).join('') + '</div><div class="hint">每个字:读拼音 → 看清笔画 → 写 2 遍 → 盖住默写 1 遍。</div>';
+    } else if (kind === 'ci') {
+      var b = CT.CI.slice(idx * 6, idx * 6 + 6);
+      h = '<div class="ctt">词语表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + b.length) + ' 个词(共 ' + CT.CI.length + ')</div><div class="words">' + b.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">家长报词,孩子默写;错的词圈出来再写 3 遍。</div>';
+    } else if (kind === 'en') {
+      var e = CT.EN[idx];
+      h = '<div class="ctt">' + esc(e.t) + '</div><div class="words">' + e.w.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">每个词抄 2 遍并大声读;最后合上本子,看中文默写英文。</div>';
+    } else if (kind === 'math') {
+      var m = CT.math(idx + 1);
+      h = '<div class="ctt">' + esc(m.t) + ':6 道题,写在本子上</div><ol class="qs">' + m.items.map(function (x) { return '<li><span class="qk">' + esc(x.k) + '</span> ' + esc(x.q) + (withAns ? '<div class="ans">答案:' + esc(x.a) + '</div>' : '') + '</li>'; }).join('') + '</ol>' + (withAns ? '' : '<div class="hint">竖式要小数点对齐;算完先估一估,再让家长对答案。</div>');
+    }
+    return '<div class="cont">' + h + '</div>';
+  }
   function toggle(taskId) {
     var day = today(), arr = S.checkins[day] || [], i = arr.indexOf(taskId), done;
-    if (i >= 0) { arr.splice(i, 1); done = false; } else { arr.push(taskId); done = true; }
+    var t = S.tasks.filter(function (x) { return x.id === taskId; })[0], ak = day + '|' + taskId;
+    if (i >= 0) {
+      arr.splice(i, 1); done = false;
+      if (t.kind && S.adv[ak] != null) { if ((S.prog[t.kind] || 0) === S.adv[ak] + 1) S.prog[t.kind] = S.adv[ak]; delete S.adv[ak]; } // 取消打卡:进度退回
+    } else {
+      arr.push(taskId); done = true;
+      if (t.kind) { var ix = S.prog[t.kind] || 0; if (ix < total(t.kind)) { S.adv[ak] = ix; S.prog[t.kind] = ix + 1; } } // 打卡:内容前进一份
+    }
     S.checkins[day] = arr; save();
-    var t = S.tasks.filter(function (x) { return x.id === taskId; })[0], r = daySummary(t.kid, new Date());
+    var r = daySummary(t.kid, new Date());
     return { done: done, all: done && r[0] > 0 && r[1] === r[0] };
   }
   function stats(kid) {
@@ -155,7 +197,7 @@
       '<div class="hero"><h1>' + k.emoji + ' ' + esc(k.name) + ',今天加油!</h1><div>' + (st > 0 ? '🔥 连续 <b>' + st + '</b> 天全部完成' : '今天完成全部任务,开始你的连续记录!') + '</div></div>' +
       (ts.length ? ts.map(function (t) {
         var dn1 = dn.indexOf(t.id) >= 0;
-        return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>';
+        return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>' + (t.kind ? contentHtml(t.kind, curIdx(t), false) : '');
       }).join('') : '<div class="card">今天没有任务,好好休息 😊</div>') +
       '<div class="card"><b>本周</b><div class="week">' + cells + '</div></div>';
   }
@@ -204,7 +246,15 @@
   function pTasks() {
     var ts = S.tasks.filter(function (t) { return t.kid === kid && t.active; }).sort(function (a, b) { return a.sort - b.sort || a.id - b.id; });
     function boxes(cls, days) { return [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<label><input type="checkbox" class="' + cls + '" value="' + d + '"' + (days.indexOf(d) >= 0 ? ' checked' : '') + '>' + WD[d - 1] + '</label>'; }).join(' '); }
-    pv('<div class="card"><b>每日任务</b> <span class="mute">(勾选哪几天出现)</span>' + ts.map(function (t) {
+    var kinds = [], prog = '';
+    ts.forEach(function (t) { if (t.kind && kinds.indexOf(t.kind) < 0) kinds.push(t.kind); });
+    kinds.forEach(function (k) {
+      var ix = S.prog[k] || 0, tt = total(k);
+      prog += '<div class="card"><b>' + KN[k] + '</b> <span class="mute">' + (k === 'math' ? '已做 ' + ix + ' 天' : '下一份:第 ' + Math.min(ix + 1, tt) + ' / ' + tt + ' 份') + '</span>' +
+        '<div class="row" style="margin-top:6px">从第 <input type="number" id="pg_' + k + '" value="' + (ix + 1) + '" min="1" style="width:70px"> 份开始 <button class="sm" onclick="A.saveProg(\'' + k + '\')">保存进度</button></div>' +
+        (k === 'math' ? '<details style="margin-top:6px"><summary>查看今天数学题的答案</summary>' + contentHtml(k, ix, true) + '</details>' : '') + '</div>';
+    });
+    pv((prog ? '<div class="card"><b>学习内容进度</b> <span class="mute">(孩子每打一次卡,内容自动换下一份;可在这里改到课本实际进度)</span>' + prog + '</div>' : '') + '<div class="card"><b>每日任务</b> <span class="mute">(勾选哪几天出现)</span>' + ts.map(function (t) {
       return '<div class="card"><input id="n' + t.id + '" value="' + esc(t.name) + '" style="width:100%"><div class="row" style="margin-top:6px"><input type="number" id="m' + t.id + '" value="' + t.minutes + '" style="width:70px"> 分钟 ' + boxes('w' + t.id, t.days) + '</div>' +
         '<input id="o' + t.id + '" value="' + esc(t.note) + '" placeholder="备注" style="width:100%;margin-top:6px"><div class="row" style="margin-top:6px"><button class="sm" onclick="A.saveT(' + t.id + ')">保存</button><button class="sm danger" onclick="A.delT(' + t.id + ')">删除</button></div></div>';
     }).join('') + '</div><div class="card"><b>新增任务</b><input id="nn" placeholder="任务名" style="width:100%;margin:6px 0"><div class="row"><input type="number" id="nm" value="10" style="width:70px"> 分钟 ' + boxes('nw', [1, 2, 3, 4, 5, 6, 7]) + '<button onclick="A.addT()">添加</button></div></div>' +
@@ -265,6 +315,7 @@
       var days = [].slice.call(document.querySelectorAll('.nw:checked')).map(function (x) { return +x.value; });
       S.tasks.push({ id: S.nextId++, kid: kid, name: n, minutes: +document.getElementById('nm').value || 10, days: days, note: '', active: true, sort: 99 }); save(); render();
     },
+    saveProg: function (k) { var v = parseInt(document.getElementById('pg_' + k).value, 10); if (!(v >= 1)) return toast('请填 1 以上的数字'); S.prog[k] = Math.min(v - 1, total(k)); save(); toast('进度已保存'); render(); },
     saveTalk: function () { var g = function (i) { return document.getElementById(i).value; }; S.talks[weekKey()] = { better: g('t1'), hardest: g('t2'), help: g('t3'), mine: g('t4') }; save(); toast('已保存'); render(); },
     chPin: function () { var v = document.getElementById('np').value; if (v.length < 4) return toast('PIN至少4位'); S.pin = hashPin(v); S.defpin = false; save(); toast('已修改'); render(); },
     check: function () { checkUpdate(true); },

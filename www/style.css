@@ -40,3 +40,11 @@ table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1p
 #toast{position:fixed;left:50%;bottom:30px;transform:translateX(-50%);background:var(--ink);color:#fff;padding:10px 18px;border-radius:99px;opacity:0;transition:opacity .25s;pointer-events:none;max-width:90%}
 #toast.show{opacity:1}
 .banner{background:#e8f1ff;border:1px solid #b9d3ff}
+
+.cont{background:#fff;border-radius:12px;padding:10px 12px;margin:-4px 0 12px;box-shadow:0 1px 3px rgba(0,0,0,.08)}
+.ctt{font-weight:600;margin-bottom:6px}
+.chars{display:flex;flex-wrap:wrap;gap:8px}
+.ch{text-align:center;min-width:54px}.ch .py{font-size:13px;color:#666}.ch .hz{font-size:40px;line-height:1.1}.ch .rd{font-size:11px;color:#999}
+.words{display:flex;flex-wrap:wrap;gap:6px 14px}.words span{font-size:20px}.words small{display:block;font-size:12px;color:#666}
+.qs{padding-left:20px;margin:0}.qs li{margin:6px 0;font-size:17px}.qk{font-size:12px;background:#eef;border-radius:6px;padding:1px 6px;margin-right:4px}
+.ans{color:#2a7;font-size:14px}.hint{font-size:12px;color:#888;margin-top:8px}
