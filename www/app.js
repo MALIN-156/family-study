@@ -207,7 +207,7 @@
     var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
     if (!due.length) return '';
     return '<div class="card"><b>错题重做</b> <span class="mute">在本子上重做,连续做对 3 次就过关</span>' + due.map(function (m) {
-      return '<div class="redo"><div class="mute">' + esc(m.subject) + ' · ' + m.day.slice(5) + (m.streak ? ' · 已连对 ' + m.streak + ' 次' : '') + '</div><div>' + esc(m.topic) + '</div>' +
+      return '<div class="redo"><div class="mute">' + esc(m.subject) + ' · ' + m.day.slice(5) + (m.streak ? ' · 已连对 ' + m.streak + ' 次' : '') + '</div>' + (m.src ? '<div class="mute" style="font-size:12px">' + esc(m.src) + '</div>' : '') + '<div class="qtext">' + esc(m.q || m.topic) + '</div>' +
         '<div class="row" style="margin-top:6px"><button class="sm" onclick="A.mk(' + m.id + ',true)">做对了</button><button class="sm ghost" onclick="A.mk(' + m.id + ',false)">还不会</button></div></div>';
     }).join('') + '</div>';
   }
@@ -246,10 +246,10 @@
     pv('<div class="card"><b>录入错题</b><div class="row" style="margin-top:8px"><select id="m_sub">' + opts(SUBJ) + '</select><select id="m_type">' + opts(ERR) + '</select><input type="date" id="m_day" value="' + today() + '"></div>' +
       '<input id="m_topic" placeholder="哪道题/哪个知识点(如:小数乘法竖式对位)" style="width:100%;margin-top:8px"><input id="m_note" placeholder="备注(可选)" style="width:100%;margin-top:8px">' +
       '<div class="mute" style="margin:6px 0">不会=讲不出思路或重做仍错 · 粗心=自己重看能改对 · 没时间=空题或后半段潦草</div><button onclick="A.addM()">保存</button></div>' +
-      '<div class="card"><b>导入错题</b><p class="mute">把 Claude 整理好的错题导入文本粘贴到这里(同一天同一题不会重复导入)。</p><textarea id="m_imp" placeholder="粘贴导入文本"></textarea><div class="row" style="margin-top:8px"><button onclick="A.importM()">导入</button></div></div>' +
+      '<div class="card"><b>导入错题</b><p class="mute">点下面按钮,选微信收到的错题文件(.json)就会自动导入。同一天同一题不会重复导入。</p><div class="row"><input type="file" id="m_file" accept=".json,.txt,application/json,text/plain" onchange="A.importFile(this)"></div><details style="margin-top:8px"><summary class="mute">文件选不了?改为粘贴文本</summary><textarea id="m_imp" placeholder="粘贴导入文本"></textarea><div class="row" style="margin-top:8px"><button onclick="A.importM()">导入</button></div></details></div>' +
       '<div class="row"><button class="ghost" onclick="A.printMistakes()">🖨 打印待订正错题单</button></div>' +
       '<div class="card"><table><tr><th>日期</th><th>科目/内容</th><th>类型</th></tr>' + (list.map(function (m) {
-        return '<tr style="' + (m.fixed ? 'opacity:.5' : '') + '"><td>' + m.day.slice(5) + '</td><td>' + m.subject + '<br>' + esc(m.topic) + '<div class="mute">' + esc(m.note) + (m.redo ? ' · 重做' + m.redo + '次' : '') + ((m.streak || 0) > 0 && !m.fixed ? ' · 连对 ' + m.streak + '/3' : '') + '</div>' +
+        return '<tr style="' + (m.fixed ? 'opacity:.5' : '') + '"><td>' + m.day.slice(5) + '</td><td>' + m.subject + '<br>' + esc(m.topic) + (m.src ? '<div class="mute" style="font-size:12px">' + esc(m.src) + '</div>' : '') + '<div class="mute">' + esc(m.note) + (m.redo ? ' · 重做' + m.redo + '次' : '') + ((m.streak || 0) > 0 && !m.fixed ? ' · 连对 ' + m.streak + '/3' : '') + '</div>' +
           '<div class="row" style="margin-top:6px"><button class="sm ghost" onclick="A.redo(' + m.id + ')">重做+1</button><button class="sm" onclick="A.fix(' + m.id + ')">' + (m.fixed ? '撤销' : '已掌握') + '</button><button class="sm danger" onclick="A.delM(' + m.id + ')">删</button></div></td>' +
           '<td><select onchange="A.chType(' + m.id + ',this.value)">' + opts(ERR, m.type) + '</select></td></tr>';
       }).join('') || '<tr><td colspan="3" class="mute">暂无错题</td></tr>') + '</table></div>');
@@ -327,20 +327,33 @@
       S.tasks.push({ id: S.nextId++, kid: kid, name: n, minutes: +document.getElementById('nm').value || 10, days: days, note: '', active: true, sort: 99 }); save(); render();
     },
     saveProg: function (k) { var v = parseInt(document.getElementById('pg_' + k).value, 10); if (!(v >= 1)) return toast('请填 1 以上的数字'); S.prog[k] = Math.min(v - 1, total(k)); save(); toast('进度已保存'); render(); },
-    importM: function () {
-      var v = document.getElementById('m_imp').value.trim(), o;
+    importM: function () { A.importText(document.getElementById('m_imp').value); },
+    importFile: function (inp) {
+      var f = inp.files && inp.files[0]; if (!f) return;
+      var r = new FileReader();
+      r.onload = function () { A.importText(String(r.result || '')); };
+      r.onerror = function () { toast('文件读取失败'); };
+      r.readAsText(f, 'utf-8');
+    },
+    importText: function (txt) {
+      var v = String(txt || '').replace(/^\uFEFF/, '').trim(), o;
       try { o = JSON.parse(v); } catch (e) { return toast('这不是有效的导入文本'); }
       if (!o || o.fsa !== 'mistakes' || !o.items || !o.items.length) return toast('这不是错题导入文本');
       var k = kid; S.kids.forEach(function (x) { if (x.name === o.kid) k = x.id; });
-      var n = 0, skip = 0;
+      var n = 0, skip = 0, upd = 0;
       o.items.forEach(function (it) {
         if (!it || !it.topic) return;
         var day = /^\d{4}-\d{2}-\d{2}$/.test(it.day || '') ? it.day : today();
-        if (S.mistakes.some(function (m) { return m.kid === k && m.day === day && m.topic === it.topic; })) { skip++; return; }
-        S.mistakes.push({ id: S.nextId++, kid: k, day: day, subject: SUBJ.indexOf(it.subject) >= 0 ? it.subject : '数学', type: ERR.indexOf(it.type) >= 0 ? it.type : '不会', topic: String(it.topic), note: String(it.note || ''), fixed: false, redo: 0, streak: 0, next: day });
+        var ex = null;
+        S.mistakes.forEach(function (m) { if (m.kid === k && m.day === day && m.topic === it.topic) ex = m; });
+        if (ex) {
+          if (it.q && !ex.q) { ex.q = String(it.q); ex.src = String(it.src || ''); upd++; } else skip++;
+          return;
+        }
+        S.mistakes.push({ id: S.nextId++, kid: k, day: day, subject: SUBJ.indexOf(it.subject) >= 0 ? it.subject : '数学', type: ERR.indexOf(it.type) >= 0 ? it.type : '不会', topic: String(it.topic), note: String(it.note || ''), q: it.q ? String(it.q) : '', src: it.src ? String(it.src) : '', fixed: false, redo: 0, streak: 0, next: day });
         n++;
       });
-      save(); toast('已导入 ' + n + ' 条' + (skip ? ',跳过重复 ' + skip + ' 条' : '')); render();
+      save(); toast('已导入 ' + n + ' 条' + (upd ? ',补全原题 ' + upd + ' 条' : '') + (skip ? ',跳过重复 ' + skip + ' 条' : '')); render();
     },
     mk: function (id, ok) {
       S.mistakes.forEach(function (m) {
@@ -376,7 +389,7 @@
     printMistakes: function () {
       var k = kidOf(kid), ms = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed; }).sort(function (a, b) { return a.subject < b.subject ? -1 : 1; });
       printHtml(doc(k.name + ' 待订正错题单(' + today() + ')', '<p class="m">先让孩子讲思路,再自己重做;做对了在「重做」栏打勾。</p><table><tr><th>日期</th><th>科目</th><th>题目/知识点</th><th>类型</th><th class="b">重做①</th><th class="b">重做②</th></tr>' +
-        (ms.map(function (m) { return '<tr><td>' + m.day.slice(5) + '</td><td>' + m.subject + '</td><td>' + esc(m.topic) + '<div class="m">' + esc(m.note) + '</div></td><td>' + m.type + '</td><td></td><td></td></tr>'; }).join('') || '<tr><td colspan="6">没有待订正的错题 🎉</td></tr>') + '</table>'), k.name + ' 错题单');
+        (ms.map(function (m) { return '<tr><td>' + m.day.slice(5) + '</td><td>' + m.subject + '</td><td>' + (m.src ? '<div class="m">' + esc(m.src) + '</div>' : '') + '<div style="white-space:pre-wrap">' + esc(m.q || m.topic) + '</div></td><td>' + m.type + '</td><td></td><td></td></tr>'; }).join('') || '<tr><td colspan="6">没有待订正的错题 🎉</td></tr>') + '</table>'), k.name + ' 错题单');
     }
   };
   window.go = go;
