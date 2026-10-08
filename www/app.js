@@ -1,4 +1,4 @@
-九年级九年级/* 家庭学习打卡 - 纯前端版(数据存在手机本地 localStorage) */
+/* 家庭学习打卡 - 纯前端版(数据存在手机本地 localStorage) */
 (function () {
   'use strict';
   var ERR = ['不会', '粗心', '没时间'], SUBJ = ['语文', '数学', '英语'];
