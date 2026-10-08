@@ -99,14 +99,14 @@
   // ---------- 学习内容 ----------
   var CT = window.CONTENT || { ZI: [], CI: [], EN: [], math: function () { return { t: '', items: [] }; } };
   var SZ = { zi: 6, ci: 6 }, KN = { zi: '汉字(写字表)', ci: '词语(词语表)', en: '英语单词(北师大版5上)', math: '数学(小数乘法)' };
-  function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 12) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
+  function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 6) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
   function curIdx(t) { var a = S.adv[today() + '|' + t.id]; return a != null ? a : (S.prog[t.kind] || 0); }
   function contentHtml(kind, idx, withAns) {
     if (idx >= total(kind)) return '<div class="cont">这一部分已经学完 🎉 家长可在「任务」页调整进度。</div>';
     var h = '';
     if (kind === 'zi') {
-      var a = CT.ZI.slice(idx * 12, idx * 12 + 12);
-      h = '<div class="ctt">写字表 第 ' + (idx * 12 + 1) + '–' + (idx * 12 + a.length) + ' 个字(共 ' + CT.ZI.length + ')</div><div class="chars">' + a.map(function (z) { return '<div class="ch"><div class="py">' + esc(z[1]) + '</div><div class="hz">' + esc(z[0]) + '</div><div class="rd">偏旁 ' + esc(z[2]) + '</div></div>'; }).join('') + '</div><div class="hint">每个字:读拼音 → 看清笔画 → 写 2 遍 → 盖住默写 1 遍。</div>';
+      var a = CT.ZI.slice(idx * 6, idx * 6 + 6);
+      h = '<div class="ctt">写字表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + a.length) + ' 个字(共 ' + CT.ZI.length + ')</div><div class="chars">' + a.map(function (z) { return '<div class="ch"><div class="py">' + esc(z[1]) + '</div><div class="hz">' + esc(z[0]) + '</div><div class="rd">偏旁 ' + esc(z[2]) + '</div><div class="rd">词语:' + esc(z[4] || '') + '</div></div>'; }).join('') + '</div><div class="hint">每个字:读拼音 → 看清笔画 → 写 2 遍 → 盖住默写 1 遍。</div>';
     } else if (kind === 'ci') {
       var b = CT.CI.slice(idx * 6, idx * 6 + 6);
       h = '<div class="ctt">词语表 第 ' + (idx * 6 + 1) + '–' + (idx * 6 + b.length) + ' 个词(共 ' + CT.CI.length + ')</div><div class="words">' + b.map(function (w) { return '<span>' + esc(w[0]) + '<small>' + esc(w[1]) + '</small></span>'; }).join('') + '</div><div class="hint">家长报词,孩子默写;错的词圈出来再写 3 遍。</div>';
@@ -186,10 +186,11 @@
     var h = '', title = '';
     var head = function (t, sub) { return '<h1>' + esc(t) + '</h1><div class="nm">姓名:__________  日期:__________  ' + esc(sub || '') + '</div>'; };
     if (kind === 'zi') {
-      var a = CT.ZI.slice(idx * 12, idx * 12 + 12); title = '汉字书写练习';
+      var a = CT.ZI.slice(idx * 6, idx * 6 + 6); title = '汉字书写练习';
+      var wordCells = function (w) { var c = ''; for (var i = 0; i < w.length; i++) c += '<div class="t">' + esc(w[i]) + '</div>'; return c + blank(Math.max(0, 10 - w.length)); };
       var blank = function (n) { var c = ''; for (var i = 0; i < n; i++) c += '<div class="t"></div>'; return c; };
-      h = head(title, '每个字:看清笔画,先描一遍灰字,再写在空格里。') + a.map(function (z) {
-        return '<div class="row"><div class="lab">' + esc(z[1]) + '<br>偏旁 ' + esc(z[2]) + '</div><div class="t">' + esc(z[0]) + '</div>' + blank(17) + '</div>';
+      h = head(title, '每个字:先描灰字,再写在空格里;后面是这个字组成的词语,也描一描、写一写。') + a.map(function (z) {
+        return '<div class="row"><div class="lab">' + esc(z[1]) + '<br>偏旁 ' + esc(z[2]) + '</div><div class="t">' + esc(z[0]) + '</div>' + blank(6) + '<div style="width:5mm;flex:none"></div>' + wordCells(z[4] || '') + '</div>';
       }).join('');
     } else if (kind === 'ci') {
       var b = CT.CI.slice(idx * 6, idx * 6 + 6); title = '词语听写练习';
