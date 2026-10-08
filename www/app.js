@@ -173,10 +173,10 @@
   }
   function sheetHtml(kind, idx) {
     var css = '@page{size:A4;margin:12mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:14px/1.5 "Microsoft YaHei",sans-serif;margin:0;color:#000}h1{font-size:18px;margin:0 0 4px}.nm{font-size:12px;color:#444;margin-bottom:8px}' +
-      '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{width:22mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
-      '.t{position:relative;width:17mm;height:17mm;border:1px solid #222;box-sizing:border-box;font-size:12mm;line-height:17mm;text-align:center;color:#aaa}' +
+      '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{width:20mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
+      '.t{position:relative;width:12mm;height:12mm;border:1px solid #222;box-sizing:border-box;font-size:8.5mm;line-height:12mm;text-align:center;color:#aaa}' +
       '.t:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #bbb}.t:after{content:"";position:absolute;top:0;bottom:0;left:50%;border-left:1px dashed #bbb}' +
-      '.l4{position:relative;height:11mm;border-top:1px solid #333;border-bottom:1px solid #333;margin:0 0 2mm}.l4:before{content:"";position:absolute;left:0;right:0;top:50%;border-top:1px dashed #999}' +
+      '.l4{position:relative;height:10mm;border-top:1px solid #777;border-bottom:1px solid #777;margin:0 0 5mm}.l4:before{content:"";position:absolute;left:0;right:0;top:33.3%;border-top:1px solid #333}.l4:after{content:"";position:absolute;left:0;right:0;top:66.6%;border-top:1px solid #d33}' +
       '.w{font-size:15px;margin:3mm 0 1mm}.w small{color:#555;font-size:12px;margin-left:6px}.sec{font-weight:bold;margin:5mm 0 2mm;font-size:14px}.ln{border-bottom:1px solid #333;height:9mm;margin:0 0 1mm}' +
       '.q{page-break-inside:avoid;margin:0 0 4mm;font-size:16px}.sp{height:34mm}.pb{page-break-before:always}.gr{border:1px solid #888;padding:4px 8px;margin:3mm 0;font-size:13px}';
     var h = '', title = '';
@@ -184,7 +184,7 @@
     if (kind === 'zi') {
       var a = CT.ZI.slice(idx * 6, idx * 6 + 6); title = '汉字书写练习';
       h = head(title, '每个字:看清笔画,先描一遍灰字,再写在空格里。') + a.map(function (z) {
-        var cells = '<div class="t">' + esc(z[0]) + '</div>'; for (var i = 0; i < 8; i++) cells += '<div class="t"></div>';
+        var cells = '<div class="t">' + esc(z[0]) + '</div>'; for (var i = 0; i < 12; i++) cells += '<div class="t"></div>';
         return '<div class="row"><div class="lab">' + esc(z[1]) + '<b>' + esc(z[0]) + '</b>偏旁 ' + esc(z[2]) + '</div>' + cells + '</div>';
       }).join('');
     } else if (kind === 'ci') {
@@ -238,7 +238,13 @@
       }).join('') : '<div class="card">今天没有任务,好好休息 😊</div>') +
       redoHtml() +
       '<div class="card"><b>本周</b><div class="week">' + cells + '</div></div>' +
+      printCard() +
       '<details class="card"><summary class="mute">📥 收到新错题文件?点这里导入</summary><p class="mute">选微信里收到的错题文件(.json)就行,只会添加错题。</p><input type="file" id="m_file_k" accept=".json,.txt,application/json,text/plain" onchange="A.importFile(this)"></details>';
+  }
+  function printCard() {
+    var pk = []; S.tasks.forEach(function (t) { if (t.kid === kid && t.active !== false && t.kind && pk.indexOf(t.kind) < 0) pk.push(t.kind); });
+    if (!pk.length) return '';
+    return '<details class="card"><summary class="mute">🖨 打印练习纸(汉字 / 词语 / 英语 / 数学)</summary><div class="row" style="margin-top:8px">' + pk.map(function (k) { return '<button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + (S.adv[today() + '|' + (S.tasks.filter(function (t) { return t.kid === kid && t.kind === k; })[0] || {}).id] != null ? S.adv[today() + '|' + S.tasks.filter(function (t) { return t.kid === kid && t.kind === k; })[0].id] : (S.prog[k] || 0)) + ')">🖨 ' + esc(KN[k] || k) + '</button>'; }).join('') + '</div><div class="mute" style="margin-top:6px">打印的是今天这一份练习。</div></details>';
   }
   function redoHtml() {
     var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
