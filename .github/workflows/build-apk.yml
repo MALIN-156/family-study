@@ -28,6 +28,8 @@ jobs:
           java-version: 21
 
       - uses: android-actions/setup-android@v3
+        with:
+          packages: ''
 
       - name: 读取版本号
         run: |
