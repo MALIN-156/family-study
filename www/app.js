@@ -201,7 +201,8 @@
         return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>' + (t.kind ? contentHtml(t.kind, curIdx(t), false) : '');
       }).join('') : '<div class="card">今天没有任务,好好休息 😊</div>') +
       redoHtml() +
-      '<div class="card"><b>本周</b><div class="week">' + cells + '</div></div>';
+      '<div class="card"><b>本周</b><div class="week">' + cells + '</div></div>' +
+      '<details class="card"><summary class="mute">📥 收到新错题文件?点这里导入</summary><p class="mute">选微信里收到的错题文件(.json)就行,只会添加错题。</p><input type="file" id="m_file_k" accept=".json,.txt,application/json,text/plain" onchange="A.importFile(this)"></details>';
   }
   function redoHtml() {
     var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
