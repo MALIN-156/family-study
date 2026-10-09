@@ -100,7 +100,7 @@
   var CT = window.CONTENT || { ZI: [], CI: [], EN: [], math: function () { return { t: '', items: [] }; } };
   var SZ = { zi: 6, ci: 6 }, KN = { zi: '汉字(写字表)', ci: '词语(词语表)', en: '英语单词(北师大版5上)', math: '数学(小数乘法)' };
   function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 6) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
-  function curIdx(t) { var a = S.adv[today() + '|' + t.id]; return a != null ? a : (S.prog[t.kind] || 0); }
+  function curIdx(t) { return S.prog[t.kind] || 0; }
   function contentHtml(kind, idx, withAns) {
     if (idx >= total(kind)) return '<div class="cont">这一部分已经学完 🎉 家长可在「任务」页调整进度。</div>';
     var h = '';
@@ -175,7 +175,7 @@
     var P = window.Capacitor && window.Capacitor.Plugins && window.Capacitor.Plugins.Browser;
     if (P && P.open) P.open({ url: u }); else window.open(u, '_blank');
   }
-  function sheetHtml(kind, idx, ans) {
+  function sheetHtml(kind, idx, ans, ci2) {
     var css = '@page{size:A4;margin:12mm}*{-webkit-print-color-adjust:exact;print-color-adjust:exact}body{font:14px/1.5 "Microsoft YaHei",sans-serif;margin:0;color:#000}h1{font-size:18px;margin:0 0 4px}.nm{font-size:12px;color:#444;margin-bottom:8px}' +
       '.row{display:flex;align-items:center;margin:0 0 2mm;page-break-inside:avoid}.lab{flex:none;width:20mm;text-align:center;font-size:11px;line-height:1.2}.lab b{display:block;font-size:13px;font-weight:normal}' +
       '.t{flex:none;position:relative;width:9mm;height:9mm;border:1px solid #222;box-sizing:border-box;font-size:6.5mm;line-height:9mm;text-align:center;color:#aaa}' +
@@ -192,6 +192,11 @@
       h = head(title, '每个字:先描灰字,再写在空格里;后面是这个字组成的词语,也描一描、写一写。') + a.map(function (z) {
         return '<div class="row"><div class="lab">' + esc(z[1]) + '<br>偏旁 ' + esc(z[2]) + '</div><div class="t">' + esc(z[0]) + '</div>' + blank(6) + '<div style="width:5mm;flex:none"></div>' + wordCells(z[4] || '') + '</div>';
       }).join('');
+      if (ci2 != null && ci2 < total('ci')) {
+        var cw = CT.CI.slice(ci2 * 6, ci2 * 6 + 6);
+        h += '<div class="sec" style="margin-top:8mm">词语听写:家长报词,孩子写在横线上(写错的订正后再写 3 遍)</div>' + cw.map(function (w, i) { return '<div class="q" style="margin:0 0 2mm">' + (i + 1) + '. <span style="color:#555;font-size:13px">' + esc(w[1]) + '</span><div class="ln"></div></div>'; }).join('');
+        if (ans) h += '<div class="sec">参考答案(家长用)</div><div style="font-size:16px">' + cw.map(function (w) { return esc(w[0]); }).join('  ') + '</div>';
+      }
     } else if (kind === 'ci') {
       var b = CT.CI.slice(idx * 6, idx * 6 + 6); title = '词语听写练习';
       h = head(title, '家长报词,孩子写在横线上;写错的词订正后再写 3 遍。') + b.map(function (w, i) { return '<div class="q">' + (i + 1) + '. <span style="color:#555;font-size:13px">' + esc(w[1]) + '</span><div class="ln"></div></div>'; }).join('') +
@@ -249,8 +254,9 @@
   }
   function printCard() {
     var pk = []; S.tasks.forEach(function (t) { if (t.kid === kid && t.active !== false && t.kind && pk.indexOf(t.kind) < 0) pk.push(t.kind); });
+    if (pk.indexOf('zi') >= 0) pk = pk.filter(function (k) { return k !== 'ci'; });
     if (!pk.length) return '';
-    return '<details class="card"><summary class="mute">🖨 打印练习纸(汉字 / 词语 / 英语 / 数学)</summary><div class="row" style="margin-top:8px">' + pk.map(function (k) { return '<button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + (S.adv[today() + '|' + (S.tasks.filter(function (t) { return t.kid === kid && t.kind === k; })[0] || {}).id] != null ? S.adv[today() + '|' + S.tasks.filter(function (t) { return t.kid === kid && t.kind === k; })[0].id] : (S.prog[k] || 0)) + ')">🖨 ' + esc(KN[k] || k) + '</button>'; }).join('') + '</div><div class="mute" style="margin-top:6px">打印的是今天这一份练习。</div></details>';
+    return '<details class="card"><summary class="mute">🖨 打印练习纸(汉字+词语 / 英语 / 数学)</summary><div class="row" style="margin-top:8px">' + pk.map(function (k) { return '<button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + (S.prog[k] || 0) + ')">🖨 ' + esc(k === 'zi' ? '汉字+词语' : (KN[k] || k)) + '</button>'; }).join('') + '</div><div class="mute" style="margin-top:6px">打印的是当前这一份练习。</div></details>';
   }
   function redoHtml() {
     var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
@@ -436,8 +442,11 @@
       }).join('') + '</table>'), k.name + ' 一周安排');
     },
     printKind: function (kind, idx, ans) {
+      var ci2 = null;
+      if (kind === 'ci' && (S.prog.zi || 0) < total('zi')) { ci2 = idx; kind = 'zi'; idx = S.prog.zi || 0; }
+      else if (kind === 'zi') { var cx = S.prog.ci || 0; if (cx < total('ci')) ci2 = cx; }
       if (idx >= total(kind)) return toast('这一部分已经学完');
-      var r = sheetHtml(kind, idx, ans); printHtml(r.html, r.title);
+      var r = sheetHtml(kind, idx, ans, ci2); if (ci2 != null) r.title = '汉字与词语练习'; printHtml(r.html, r.title);
     },
     printMistakes: function () {
       var k = kidOf(kid), ms = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed; }).sort(function (a, b) { return a.subject < b.subject ? -1 : 1; });
