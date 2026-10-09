@@ -100,7 +100,23 @@
   var CT = window.CONTENT || { ZI: [], CI: [], EN: [], math: function () { return { t: '', items: [] }; } };
   var SZ = { zi: 6, ci: 6 }, KN = { zi: '汉字(写字表)', ci: '词语(词语表)', en: '英语单词(北师大版5上)', math: '数学(小数乘法)' };
   function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 6) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
-  function curIdx(t) { return S.prog[t.kind] || 0; }
+  function curIdx(t) { var a = S.adv[today() + '|' + t.id]; return a != null ? a : (S.prog[t.kind] || 0); }
+  var pdOff = 0;
+  function taskOf(kind) { return S.tasks.filter(function (t) { return t.kid === kid && t.active !== false && t.kind === kind; })[0]; }
+  function idxFor(t, off) { // 按"每个排定的学习日学一份"推算某天的内容序号
+    var base = curIdx(t), n = 0, i;
+    if (off >= 0) { for (i = 0; i < off; i++) if (t.days.indexOf(isoWd(addDays(new Date(), i))) >= 0) n++; return base + n; }
+    for (i = off; i < 0; i++) if (t.days.indexOf(isoWd(addDays(new Date(), i))) >= 0) n++;
+    return Math.max(0, base - n);
+  }
+  function sumTxt(kind, idx) {
+    if (idx >= total(kind)) return '已学完';
+    if (kind === 'zi') return '写字表 第 ' + (idx * 6 + 1) + '–' + Math.min(CT.ZI.length, idx * 6 + 6) + ' 个字';
+    if (kind === 'ci') return '词语 第 ' + (idx * 6 + 1) + '–' + Math.min(CT.CI.length, idx * 6 + 6) + ' 个';
+    if (kind === 'en') return CT.EN[idx].t;
+    return '第 ' + (idx + 1) + ' 套';
+  }
+  function dlabel(off) { var d = addDays(new Date(), off); return (d.getMonth() + 1) + '月' + d.getDate() + '日 周' + WD[isoWd(d) - 1]; }
   function contentHtml(kind, idx, withAns) {
     if (idx >= total(kind)) return '<div class="cont">这一部分已经学完 🎉 家长可在「任务」页调整进度。</div>';
     var h = '';
@@ -243,7 +259,7 @@
     }
     root.innerHTML = '<div class="row" style="justify-content:space-between"><button class="ghost sm" onclick="go(\'pick\')">← 换人</button><span class="mute">' + today() + '</span></div>' +
       '<div class="hero"><h1>' + k.emoji + ' ' + esc(k.name) + ',今天加油!</h1><div>' + (st > 0 ? '🔥 连续 <b>' + st + '</b> 天全部完成' : '今天完成全部任务,开始你的连续记录!') + '</div></div>' +
-      (ts.length ? ts.map(function (t) {
+      '<div class="ctt" style="margin:10px 4px 4px">今天 ' + dlabel(0) + ' 的任务</div>' + (ts.length ? ts.map(function (t) {
         var dn1 = dn.indexOf(t.id) >= 0;
         return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>' + (t.kind ? contentHtml(t.kind, curIdx(t), false) : '');
       }).join('') : '<div class="card">今天没有任务,好好休息 😊</div>') +
@@ -253,10 +269,15 @@
       '<details class="card"><summary class="mute">📥 收到新错题文件?点这里导入</summary><p class="mute">选微信里收到的错题文件(.json)就行,只会添加错题。</p><input type="file" id="m_file_k" accept=".json,.txt,application/json,text/plain" onchange="A.importFile(this)"></details>';
   }
   function printCard() {
-    var pk = []; S.tasks.forEach(function (t) { if (t.kid === kid && t.active !== false && t.kind && pk.indexOf(t.kind) < 0) pk.push(t.kind); });
-    if (pk.indexOf('zi') >= 0) pk = pk.filter(function (k) { return k !== 'ci'; });
-    if (!pk.length) return '';
-    return '<details class="card"><summary class="mute">🖨 打印练习纸(汉字+词语 / 英语 / 数学)</summary><div class="row" style="margin-top:8px">' + pk.map(function (k) { return '<button class="sm ghost" onclick="A.printKind(\'' + k + '\',' + (S.prog[k] || 0) + ')">🖨 ' + esc(k === 'zi' ? '汉字+词语' : (KN[k] || k)) + '</button>'; }).join('') + '</div><div class="mute" style="margin-top:6px">打印的是当前这一份练习。</div></details>';
+    var offs = [-2, -1, 0, 1, 2, 3, 4, 5], d = addDays(new Date(), pdOff), ts = tasksFor(kid, d).filter(function (t) { return t.kind; }), seen = {}, rows = '';
+    var chips = offs.map(function (o) { var dd = addDays(new Date(), o); return '<button class="sm ' + (o === pdOff ? '' : 'ghost') + '" onclick="A.setOff(' + o + ')">' + (o === 0 ? '今天' : o === 1 ? '明天' : o === -1 ? '昨天' : (dd.getMonth() + 1) + '/' + dd.getDate()) + '</button>'; }).join(' ');
+    ts.forEach(function (t) {
+      var k = t.kind; if (k === 'ci' && taskOf('zi')) return;
+      var ix = idxFor(t, pdOff), lab = k === 'zi' ? '汉字+词语' : (KN[k] || k), sm = sumTxt(k, ix);
+      if (k === 'zi' && taskOf('ci')) sm += ' + 词语听写 ' + sumTxt('ci', idxFor(taskOf('ci'), pdOff));
+      rows += '<div class="row" style="justify-content:space-between;margin:6px 0"><div><b>' + esc(lab) + '</b><div class="mute">' + esc(sm) + '</div></div><button class="sm ghost" onclick="A.printOn(\'' + k + '\',' + pdOff + ')">🖨 打印</button></div>';
+    });
+    return '<div class="card"><b>🖨 选日期打印练习</b><div class="row" style="margin:8px 0;flex-wrap:wrap">' + chips + '</div><div><b>' + dlabel(pdOff) + '</b> 的练习' + (pdOff < 0 ? '(按每天都做推算)' : '') + '</div>' + (rows || '<div class="mute" style="margin-top:6px">这一天没有安排练习。</div>') + '</div>';
   }
   function redoHtml() {
     var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
@@ -440,6 +461,14 @@
       printHtml(doc(k.name + ' 一周学习安排', '<table><tr><th>任务</th><th>分钟</th>' + WD.map(function (w) { return '<th>周' + w + '</th>'; }).join('') + '</tr>' + ts.map(function (t) {
         return '<tr><td>' + esc(t.name) + '<div class="m">' + esc(t.note) + '</div></td><td>' + t.minutes + '</td>' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<td class="c">' + (t.days.indexOf(d) >= 0 ? '☐' : '') + '</td>'; }).join('') + '</tr>';
       }).join('') + '</table>'), k.name + ' 一周安排');
+    },
+    setOff: function (n) { pdOff = n; render(); },
+    printOn: function (kind, off) {
+      var t = taskOf(kind); if (!t) return;
+      var idx = idxFor(t, off), ci2 = null;
+      if (kind === 'zi' && taskOf('ci')) { var cx = idxFor(taskOf('ci'), off); if (cx < total('ci')) ci2 = cx; }
+      if (idx >= total(kind)) return toast('这一部分已经学完');
+      var r = sheetHtml(kind, idx, 0, ci2); if (ci2 != null) r.title = '汉字与词语练习'; printHtml(r.html, r.title);
     },
     printKind: function (kind, idx, ans) {
       var ci2 = null;
