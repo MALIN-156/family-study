@@ -52,3 +52,4 @@ table{width:100%;border-collapse:collapse}th,td{padding:6px 8px;border-bottom:1p
 .redo{border-top:1px solid var(--line);padding:8px 0}
 .qtext{white-space:pre-wrap;font-size:18px;line-height:1.7;margin:4px 0;font-family:inherit}
 .gram{background:#fff8e6;border-radius:8px;padding:6px 10px;margin:6px 0;font-size:14px}.gram b{display:block}
+.cd{margin:-4px 0 10px;padding:0 6px}.cd>summary{cursor:pointer;padding:4px 8px;font-size:14px}

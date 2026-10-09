@@ -101,7 +101,7 @@
   var SZ = { zi: 6, ci: 6 }, KN = { zi: '汉字(写字表)', ci: '词语(词语表)', en: '英语单词(北师大版5上)', math: '数学(小数乘法)' };
   function total(k) { return k === 'zi' ? Math.ceil(CT.ZI.length / 6) : k === 'ci' ? Math.ceil(CT.CI.length / 6) : k === 'en' ? CT.EN.length : 9999; }
   function curIdx(t) { var a = S.adv[today() + '|' + t.id]; return a != null ? a : (S.prog[t.kind] || 0); }
-  var pdOff = 0;
+  var pdOff = 0, pdOpen = false, OC = {};
   function taskOf(kind) { return S.tasks.filter(function (t) { return t.kid === kid && t.active !== false && t.kind === kind; })[0]; }
   function idxFor(t, off) { // 按"每个排定的学习日学一份"推算某天的内容序号
     var base = curIdx(t), n = 0, i;
@@ -261,7 +261,7 @@
       '<div class="hero"><h1>' + k.emoji + ' ' + esc(k.name) + ',今天加油!</h1><div>' + (st > 0 ? '🔥 连续 <b>' + st + '</b> 天全部完成' : '今天完成全部任务,开始你的连续记录!') + '</div></div>' +
       '<div class="ctt" style="margin:10px 4px 4px">今天 ' + dlabel(0) + ' 的任务</div>' + (ts.length ? ts.map(function (t) {
         var dn1 = dn.indexOf(t.id) >= 0;
-        return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>' + (t.kind ? contentHtml(t.kind, curIdx(t), false) : '');
+        return '<div class="task ' + (dn1 ? 'done' : '') + '" onclick="A.tap(' + t.id + ')"><div class="box">' + (dn1 ? '✓' : '') + '</div><div><div class="nm">' + esc(t.name) + '</div><div class="sub">' + t.minutes + ' 分钟' + (t.note ? ' · ' + esc(t.note) : '') + '</div></div></div>' + (t.kind ? '<details class="cd"' + (OC[t.id] ? ' open' : '') + ' ontoggle="A.ocTog(' + t.id + ',this.open)"><summary class="mute">📖 查看练习内容</summary>' + contentHtml(t.kind, curIdx(t), false) + '</details>' : '');
       }).join('') : '<div class="card">今天没有任务,好好休息 😊</div>') +
       redoHtml() +
       '<div class="card"><b>本周</b><div class="week">' + cells + '</div></div>' +
@@ -277,7 +277,7 @@
       if (k === 'zi' && taskOf('ci')) sm += ' + 词语听写 ' + sumTxt('ci', idxFor(taskOf('ci'), pdOff));
       rows += '<div class="row" style="justify-content:space-between;margin:6px 0"><div><b>' + esc(lab) + '</b><div class="mute">' + esc(sm) + '</div></div><button class="sm ghost" onclick="A.printOn(\'' + k + '\',' + pdOff + ')">🖨 打印</button></div>';
     });
-    return '<div class="card"><b>🖨 选日期打印练习</b><div class="row" style="margin:8px 0;flex-wrap:wrap">' + chips + '</div><div><b>' + dlabel(pdOff) + '</b> 的练习' + (pdOff < 0 ? '(按每天都做推算)' : '') + '</div>' + (rows || '<div class="mute" style="margin-top:6px">这一天没有安排练习。</div>') + '</div>';
+    return '<details class="card"' + (pdOpen ? ' open' : '') + ' ontoggle="A.pdTog(this.open)"><summary><b>🖨 选日期打印练习</b></summary><div class="row" style="margin:8px 0;flex-wrap:wrap">' + chips + '</div><div><b>' + dlabel(pdOff) + '</b> 的练习' + (pdOff < 0 ? '(按每天都做推算)' : '') + '</div>' + (rows || '<div class="mute" style="margin-top:6px">这一天没有安排练习。</div>') + '</details>';
   }
   function redoHtml() {
     var t = today(), due = S.mistakes.filter(function (m) { return m.kid === kid && !m.fixed && (m.next || m.day) <= t; }).sort(function (a, b) { return a.day < b.day ? -1 : (a.day > b.day ? 1 : a.id - b.id); }).slice(0, 3);
@@ -462,7 +462,9 @@
         return '<tr><td>' + esc(t.name) + '<div class="m">' + esc(t.note) + '</div></td><td>' + t.minutes + '</td>' + [1, 2, 3, 4, 5, 6, 7].map(function (d) { return '<td class="c">' + (t.days.indexOf(d) >= 0 ? '☐' : '') + '</td>'; }).join('') + '</tr>';
       }).join('') + '</table>'), k.name + ' 一周安排');
     },
-    setOff: function (n) { pdOff = n; render(); },
+    setOff: function (n) { pdOff = n; pdOpen = true; render(); },
+    pdTog: function (o) { pdOpen = o; },
+    ocTog: function (id, o) { OC[id] = o; },
     printOn: function (kind, off) {
       var t = taskOf(kind); if (!t) return;
       var idx = idxFor(t, off), ci2 = null;
